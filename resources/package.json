@@ -1,0 +1,29 @@
+{
+  "name": "webcam-ndi-interface",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build-tsc": "./node_modules/.bin/tsc",
+    "build-browserify": "./node_modules/.bin/browserify ./dist/index.js -o ./static/site.js",
+    "build-browserify-min": "./node_modules/.bin/browserify -p tinyify ./dist/index.js -o ./static/site.js",
+    "build": "npm run build-tsc && npm run build-browserify",
+    "build-min": "npm run build-tsc && npm run build-browserify-min",
+    "prettier-fix": "./node_modules/.bin/prettier --write src/**/*.ts",
+    "lint-fix": "./node_modules/.bin/tslint --fix --project .",
+    "lint": "./node_modules/.bin/tslint --project ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/axios": "^0.14.0",
+    "axios": "^0.19.2",
+    "browserify": "^16.5.1",
+    "prettier": "^2.0.2",
+    "tinyify": "^2.5.2",
+    "typescript": "^3.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^13.11.0"
+  }
+}

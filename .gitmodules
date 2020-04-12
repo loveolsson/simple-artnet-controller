@@ -1,0 +1,15 @@
+[submodule "submodules/libartnet"]
+	path = submodules/libartnet
+	url = git@github.com:OpenLightingProject/libartnet.git
+[submodule "submodules/json"]
+	path = submodules/json
+	url = https://github.com/nlohmann/json.git
+[submodule "submodules/cpp-httplib"]
+	path = submodules/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib.git
+[submodule "submodules/sole"]
+	path = submodules/sole
+	url = git@github.com:r-lyeh-archived/sole.git
+[submodule "submodules/libOSCpp"]
+	path = submodules/libOSCpp
+	url = git@github.com:voidseg/libOSCpp.git
