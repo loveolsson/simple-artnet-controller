@@ -23,6 +23,14 @@ case $OS in
     ./configure --prefix=$DIRECTORY/fakeroot/
     make -j8
     make install
+
+    cd $DIRECTORY/submodules
+    git submodule update --init --recursive rtmidi
+    cd $DIRECTORY/submodules/rtmidi
+    ./autogen.sh
+    ./configure --prefix=$DIRECTORY/fakeroot/
+    make -j8
+    make install
     ;;
   *) 
     exit 1

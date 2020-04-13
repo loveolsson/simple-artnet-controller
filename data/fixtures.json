@@ -1,0 +1,26 @@
+{
+  "Dimmer": {
+    "provides": ["dimmer"],
+    "channels": ["dimmer"]
+  },
+  "RGB": {
+    "provides": ["dimmer", "color"],
+    "channels": ["red", "green", "blue"],
+    "color_matrix": "dim_rgb"
+  },
+  "RGBA": {
+    "provides": ["dimmer", "color"],
+    "channels": ["red", "green", "blue", "ww"],
+    "color_matrix": "dim_rgba"
+  },
+  "RGBW": {
+    "provides": ["dimmer", "color"],
+    "channels": ["red", "green", "blue", "cw"],
+    "color_matrix": "dim_rgbw"
+  },
+  "Dimmer Color Temp": {
+    "provides": ["dimmer", "temperature", "color"],
+    "channels": ["cw", "ww", "dimmer"],
+    "color_matrix": "temp_approx"
+  }
+}

@@ -1,54 +1,72 @@
+#include "artnet.hpp"
+#include "faders.hpp"
+#include "fadershttp.hpp"
+#include "fadersmidi.hpp"
+#include "fadersosc.hpp"
+#include "fixturemanager.hpp"
 #include "httpserver.hpp"
 #include "httpstatic.hpp"
+#include "midi.hpp"
 #include "osc.hpp"
 #include "settings.hpp"
 
+#include <signal.h>
+
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 
-extern "C" {
-#include "artnet/artnet.h"
+static volatile int keepRunning = 1;
+static void
+intHandler(int)
+{
+    keepRunning = 0;
 }
 
-static volatile int keepRunning = 1;
-static void intHandler(int) { keepRunning = 0; }
+int
+main(int argc, char *argv[])
+{
+    signal(SIGINT, intHandler);
 
-int main(int argc, char *argv[]) {
-  signal(SIGINT, intHandler);
+    if (argc != 2) {
+        return EXIT_FAILURE;
+    }
 
-  if (argc != 2) {
-    return 1;
-  }
+    Settings settings;
+    FixtureManager fixtureManager;
 
-  OSC osc;
-  osc.AddTarget("/test", [](int a, std::string b) {
-    std::cout << "Call to /test with " << a << ", " << b << std::endl;
-  });
+    fixtureManager.CreateFixture("Dimmer");
+    fixtureManager.CreateFixture("Dimmer");
+    fixtureManager.CreateFixture("Dimmer");
 
-  Settings settings;
-  HTTPServer server;
-  AssignStaticFiles(&server);
+    HTTPServer httpServer;
+    AssignStaticFiles(&httpServer);
 
-  auto node = artnet_new(argv[1], 0);
-  if (!node) {
-    printf("Unable to set up artnet node: %s\n", artnet_strerror());
-    return 1;
-  }
+    OSC osc;
+    MIDI midi;
+    Artnet artnet(argv[1]);
 
-  artnet_start(node);
+    FaderBank faderBank(settings);
 
-  server.Start();
+    MIDIFaders midiFaders(midi, faderBank);
+    OSCFaders oscFaders(osc, faderBank);
+    HTTPFaders httpFaders(httpServer, faderBank);
 
-  while (keepRunning) {
-    osc.Poll();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
+    httpServer.Start();
 
-  server.Stop();
+    while (keepRunning) {
+        fixtureManager.Poll();
+        midi.Poll();
+        osc.Poll();
+        faderBank.Poll();
 
-  artnet_stop(node);
+        artnet.Throttle();
+        artnet.Send();
+    }
 
-  return EXIT_SUCCESS;
+    httpServer.Stop();
+
+    return EXIT_SUCCESS;
 }

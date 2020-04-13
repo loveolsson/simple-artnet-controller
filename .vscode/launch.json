@@ -6,12 +6,11 @@
   "configurations": [
     {
       "name": "(lldb) Launch",
-      "type": "cppdbg",
+      "type": "lldb",
       "request": "launch",
       "program": "${workspaceFolder}/Build/simple-artnet",
       "args": ["10.0.1.60"],
-      "cwd": "${workspaceFolder}/Build/",
-      "MIMode": "lldb"
+      "cwd": "${workspaceFolder}/Build/"
     }
   ]
 }

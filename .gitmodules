@@ -13,3 +13,9 @@
 [submodule "submodules/libOSCpp"]
 	path = submodules/libOSCpp
 	url = git@github.com:voidseg/libOSCpp.git
+[submodule "submodules/rtmidi"]
+	path = submodules/rtmidi
+	url = git@github.com:thestk/rtmidi.git
+[submodule "submodules/concurrentqueue"]
+	path = submodules/concurrentqueue
+	url = git@github.com:cameron314/concurrentqueue.git
