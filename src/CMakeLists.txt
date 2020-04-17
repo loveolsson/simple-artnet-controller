@@ -41,4 +41,5 @@ target_link_libraries(${ProjectName}
     ${CoreMIDI_LIB}
     ${CoreAudio_LIB}
     ${CoreFoundation_LIB}
+    restinio::restinio
 ) 

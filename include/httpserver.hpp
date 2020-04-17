@@ -25,10 +25,11 @@ namespace httplib {
 class Server;
 }
 
-using HTTPHeaders = std::vector<std::pair<std::string, std::string>>;
-using HTTPJsonReq = nlohmann::json;
-using HTTPJsonRes = const std::tuple<nlohmann::json, int, HTTPHeaders>;
-using HTTPJsonFn  = std::function<HTTPJsonRes(const HTTPJsonReq &)>;
+using HTTPHeaders     = std::vector<std::pair<std::string, std::string>>;
+using HTTPJsonReq     = nlohmann::json;
+using HTTPJsonRes     = const std::tuple<nlohmann::json, int, HTTPHeaders>;
+using HTTPJsonFn      = std::function<HTTPJsonRes(const HTTPJsonReq &)>;
+using HTTPJsonAsyncFn = std::function<void(const HTTPJsonReq &, std::function<void(HTTPJsonRes)>)>;
 
 class HTTPServer
 {
@@ -47,5 +48,6 @@ public:
 
     httplib::Server &GetServer();
     void AttachJSONGet(const std::string &path, HTTPJsonFn fn);
+    void AttachJSONGetAsync(const std::string &path, HTTPJsonAsyncFn fn);
     void AttachJSONPost(const std::string &path, HTTPJsonFn fn);
 };

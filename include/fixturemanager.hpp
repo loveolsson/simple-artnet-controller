@@ -41,8 +41,8 @@ class FixtureManager
     FixtureId CreateFixtureInternal(const std::string &type);
 
 public:
-    JSONCache jsonFixtureDescs;
-    JSONCache jsonConfigCache;
+    JSONCache jsonFixtureDescs{TimePoint::duration::zero()};
+    JSONCache jsonConfigCache{TimePoint::duration{1000}};
 
     void Init(Settings &);
     void StoreSettings(Settings &);

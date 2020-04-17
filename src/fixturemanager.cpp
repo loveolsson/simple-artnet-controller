@@ -255,6 +255,8 @@ FixtureManager::ApplyChangesAndGetDeletions()
         this->CacheConfig();
     }
 
+    this->jsonConfigCache.Poll();
+
     return deletions;
 }
 

@@ -30,11 +30,16 @@ SafeParseJsonTimePointString(nlohmann::json j)
 static inline TimePoint
 SafeParseJsonTimePointString(nlohmann::json j, TimePoint fallback)
 {
+    if (!j.is_string()) {
+        return fallback;
+    }
+
     try {
         return TimePoint{TimePoint::duration{std::stoll(j.get<std::string>())}};
     } catch (std::invalid_argument &) {
     } catch (std::out_of_range &) {
     } catch (nlohmann::json::exception &) {
+    } catch (nlohmann::json::type_error &) {
     }
 
     return fallback;

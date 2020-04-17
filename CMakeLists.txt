@@ -5,6 +5,13 @@ project(${ProjectName})
 
 set (CMAKE_CXX_STANDARD 17)
 
+set(RESTINIO_FIND_DEPS OFF)
+set(RESTINIO_STAND_ALONE_ASIO_DEFINES ON)
+
+include_directories( submodules/restinio/dev/asio/include )
+add_subdirectory (submodules/restinio/dev/fmt)
+add_subdirectory (submodules/restinio/dev/nodejs/http_parser)
+add_subdirectory (submodules/restinio/dev/restinio)
 add_subdirectory (src)
 
 set_target_properties(${ProjectName}

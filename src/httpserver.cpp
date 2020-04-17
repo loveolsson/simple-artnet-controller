@@ -2,6 +2,7 @@
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
+#include <restinio/all.hpp>
 
 #include <iostream>
 #include <thread>
@@ -76,6 +77,29 @@ HTTPServer::AttachJSONGet(const std::string &path, HTTPJsonFn fn)
         for (auto &h : std::get<2>(ret)) {
             res.set_header(h.first.c_str(), h.second.c_str());
         }
+    });
+}
+
+void
+HTTPServer::AttachJSONGetAsync(const std::string &path, HTTPJsonAsyncFn fn)
+{
+    this->server->Get(path.c_str(), [fn](const Request &req, Response &res) {
+        auto body = json::object();
+
+        for (const auto &param : req.params) {
+            body[param.first] = param.second;
+        }
+
+        res.set_header("Content-Type", MIME_json);
+        res.set_chunked_content_provider([&fn, body](uint64_t offset, DataSink &sink) {
+            auto cb = [&sink](HTTPJsonRes ret) {
+                auto data = std::get<0>(ret).dump();
+                sink.write(data.data(), data.size());
+                sink.done();
+            };
+
+            fn(body, cb);
+        });
     });
 }
 

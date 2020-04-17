@@ -31,6 +31,11 @@ case $OS in
     ./configure --prefix=$DIRECTORY/fakeroot/
     make -j
     make install
+
+    cd $DIRECTORY/submodules
+    git submodule update --init --recursive restinio
+    cd $DIRECTORY/submodules/restinio
+    mxxruexternals
   ;;
   *) 
     exit 1

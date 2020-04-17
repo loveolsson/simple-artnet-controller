@@ -2,24 +2,29 @@
 
 #include "helpers.hpp"
 
+#include <iostream>
+
 using namespace nlohmann;
 
 void
 InitFixtureManagerHTTP(HTTPServer &server, FixtureManager &fixtureManager)
 {
-    server.AttachJSONGet("/fixtures", [&fixtureManager](auto req) {
+    server.AttachJSONGetAsync("/fixtures", [&fixtureManager](auto req, auto resCb) {
         TimePoint since =
             SafeParseJsonTimePointString(req["since"], TimePoint{TimePoint::duration::zero()});
 
-        auto fixtures = fixtureManager.jsonConfigCache.GetData(since);
-        if (fixtures.first.has_value()) {
-            return std::make_tuple(
-                std::move(*fixtures.first), 200,
-                HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}});
-        }
+        fixtureManager.jsonConfigCache.GetDataAsync(since, [resCb](auto fixtures) {
+            std::cout << "Async" << std::endl;
+            if (fixtures.first.has_value()) {
+                resCb(std::make_tuple(
+                    std::move(*fixtures.first), 200,
+                    HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}}));
+            }
 
-        return std::make_tuple(
-            json(), 304, HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}});
+            resCb(std::make_tuple(
+                json(), 304,
+                HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}}));
+        });
     });
 
     server.AttachJSONGet("/fixtureDescriptions", [&fixtureManager](auto req) {
