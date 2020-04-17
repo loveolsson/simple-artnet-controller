@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include <map>
 #include <memory>
@@ -25,8 +25,9 @@ namespace httplib {
 class Server;
 }
 
+using HTTPHeaders = std::vector<std::pair<std::string, std::string>>;
 using HTTPJsonReq = nlohmann::json;
-using HTTPJsonRes = std::pair<nlohmann::json, int>;
+using HTTPJsonRes = const std::tuple<nlohmann::json, int, HTTPHeaders>;
 using HTTPJsonFn  = std::function<HTTPJsonRes(const HTTPJsonReq &)>;
 
 class HTTPServer
@@ -36,17 +37,15 @@ private:
 
     std::unique_ptr<httplib::Server> server;
     std::unique_ptr<std::thread> thread;
-    std::string url;
 
 public:
     HTTPServer();
     ~HTTPServer();
 
-    void Start();
+    void StartThread(int port);
     void Stop();
 
     httplib::Server &GetServer();
-    const std::string &NDIURL() const;
     void AttachJSONGet(const std::string &path, HTTPJsonFn fn);
     void AttachJSONPost(const std::string &path, HTTPJsonFn fn);
 };

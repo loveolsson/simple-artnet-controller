@@ -1,72 +1,28 @@
-import axios, {CancelTokenSource} from 'axios'
-import {URLParam} from './urlparam';
-import {UpdateValueElement, ValueInfoListItem} from './valueinfo';
+import { Sliders } from "./sliders";
+import { Fixtures } from "./fixtures";
+import { Grid } from "./grid";
 
 class MainClass {
-  cancelToken: CancelTokenSource = axios.CancelToken.source();
-  readonly someRange: HTMLInputElement|null;
+  sliders: Sliders = new Sliders();
+  fixtures: Fixtures = new Fixtures();
+  grid: Grid = new Grid();
 
-  constructor(private i: number) {
-    this.someRange = document.querySelector('#someRange');
-    if (this.someRange) {
-      this.someRange.addEventListener('change', this.SetSomeRange.bind(this));
-    }
-
-    this.RegularUpdate();
+  constructor() {
   }
 
-  private SetSomeRange() {
-    console.log('Set data');
-    const payload = {
-      data: (this.someRange ? this.someRange.value : 0).toString()
-    };
-    this.PostJson(`/${this.i}/settings`, payload);
-  }
+  Init() {
+    this.sliders.Init();
+    this.fixtures.Init();
+    this.grid.Init();
 
-  private async PostJson(url: string, payload: any) {
-    this.cancelToken.cancel();
-    this.cancelToken = axios.CancelToken.source();
+    this.grid.Resize({x: 5, y: 5}); 
 
-    try {
-      const {data} = await axios.post(
-          url, JSON.stringify(payload),
-          {headers: {'Content-Type': 'application/json'}});
-      console.log('Successfull set', data);
-    } catch (e) {
-      console.error('Set value failed', e);
-    }
-  }
-
-  private ParseUpdateData(items: ValueInfoListItem[]) {
-    console.error('parse', items);
-
-    items.forEach(item => {
-      UpdateValueElement(this.someRange, item.info);
-    });
-  };
-
-  private async RegularUpdate() {
-    try {
-      const {data} = await axios.get(
-          `/${this.i}/settings`, {cancelToken: this.cancelToken.token});
-      if (!data || typeof data !== 'object') {
-        throw new Error('Bad data');
-      }
-
-      this.ParseUpdateData(data);
-      setTimeout(this.RegularUpdate.bind(this), 2000);
-    } catch (e) {
-      setTimeout(this.RegularUpdate.bind(this), 5000);
-    }
+    document.body.classList.remove('hidden');
   }
 }
 
+const main = new MainClass();
+
 window.addEventListener('load', () => {
-  const cameraIndex = parseInt(URLParam('index') || '0');
-  if (Number.isFinite(cameraIndex)) {
-    console.log(`Page loaded for camera ${cameraIndex}`);
-    new MainClass(cameraIndex);
-  } else {
-    console.error('Bad camera index');
-  }
+  main.Init();
 });

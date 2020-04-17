@@ -1,39 +1,33 @@
 #include "httpstatic.hpp"
 
+#include "httpstaticfiles.hpp"
+
 #include <httplib.h>
 
 #include <map>
 #include <string>
 #include <utility>
 
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-
 using namespace httplib;
 
 struct StaticFile {
     const char *path;
-    const uint8_t *data;
-    const size_t size;
+    const std::string &str;
     const char *type;
 };
 
-INCBIN(IndexHtml, "index.html");
-INCBIN(SiteJs, "site.js");
-INCBIN(BootstrapMinCss, "bootstrap.min.css");
-
 void
-AssignStaticFiles(HTTPServer *server)
+InitStaticFiles(HTTPServer *server)
 {
     const std::vector<StaticFile> files = {
-        {"/", gIndexHtml_data, gIndexHtml_size, MIME_html},
-        {"/site.js", gSiteJs_data, gSiteJs_size, MIME_js},
-        {"/bootstrap.min.css", gBootstrapMinCss_data, gBootstrapMinCss_size, MIME_css},
+        {"/", fileIndexHtml, MIME_html},
+        {"/site.js", fileSiteJs, MIME_js},
+        {"/bootstrap.min.css", fileBootstrapMinCss, MIME_css},
     };
 
     for (const auto &file : files) {
         server->GetServer().Get(file.path, [file](const Request &req, Response &res) {
-            res.set_content((const char *)file.data, file.size, file.type);
+            res.set_content(file.str, file.type);
         });
     }
 }

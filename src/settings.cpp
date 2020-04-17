@@ -1,3 +1,6 @@
+
+#include <nlohmann/json.hpp>
+//
 #include "settings.hpp"
 
 #include <fstream>
@@ -9,8 +12,8 @@ using namespace nlohmann;
 
 static const char *settingsFile = "settings.json";
 
-Settings::Settings()
-    : data(json::object())
+void
+Settings::LoadSettings()
 {
     using itr = std::istreambuf_iterator<char>;
     std::ifstream t(settingsFile);
@@ -26,7 +29,8 @@ Settings::Settings()
     }
 }
 
-Settings::~Settings()
+void
+Settings::SaveSettings()
 {
     std::ofstream t(settingsFile);
     t << std::setw(4) << this->data;
@@ -90,7 +94,7 @@ Settings::SetString(const std::string &name, const std::string &val)
     this->data[name] = val;
 }
 
-int
+nlohmann::json
 Settings::GetJSON(const std::string &name, const nlohmann::json &d) const
 {
     auto find = this->data.find(name);

@@ -14,14 +14,14 @@ case $OS in
     cd $DIRECTORY/submodules/libartnet
     autoreconf -fi
     ./configure --prefix=$DIRECTORY/fakeroot/
-    make -j8
+    make -j
     make install
 
     cd $DIRECTORY/submodules
     git submodule update --init --recursive libOSCpp
     cd $DIRECTORY/submodules/libOSCpp
     ./configure --prefix=$DIRECTORY/fakeroot/
-    make -j8
+    make -j
     make install
 
     cd $DIRECTORY/submodules
@@ -29,9 +29,9 @@ case $OS in
     cd $DIRECTORY/submodules/rtmidi
     ./autogen.sh
     ./configure --prefix=$DIRECTORY/fakeroot/
-    make -j8
+    make -j
     make install
-    ;;
+  ;;
   *) 
     exit 1
   ;;

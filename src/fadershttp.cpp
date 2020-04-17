@@ -11,8 +11,8 @@ HTTPFaders::HTTPFaders(HTTPServer &server, FaderBank &faderBank)
         auto &valueCache = this->faderValues[i];
         auto &changed    = this->lastChange;
 
-        fader.Subscribe([&valueCache, &changed](float value, TimePoint tp) {
-            valueCache = value;
+        fader.Subscribe([&valueCache, &changed](IntVal value, TimePoint tp) {
+            valueCache = value.val;
             changed    = tp;
         });
     }
@@ -35,26 +35,27 @@ HTTPFaders::HTTPFaders(HTTPServer &server, FaderBank &faderBank)
                 });
             }
             json j = json{
-                {"changed", TimePointToString(changed)},
                 {"faders", std::move(arr)},
             };
 
-            return std::make_pair(std::move(j), 200);
+            return std::make_tuple(std::move(j), 200,
+                                   HTTPHeaders{{"SimpleArtnetTime", TimePointToString(changed)}});
         }
 
-        return std::make_pair(json{}, 304);
+        return std::make_tuple(json{}, 304,
+                               HTTPHeaders{{"SimpleArtnetTime", TimePointToString(changed)}});
     });
 
     server.AttachJSONPost("/faders", [&faderBank](auto &req) {
         auto index = SafeParseJson<int>(req["index"]);
-        auto value = SafeParseJson<float>(req["value"]);
+        auto value = SafeParseJson<int>(req["value"]);
 
         if (!index.has_value() || !value.has_value()) {
-            return std::make_pair(json{}, 500);
+            return std::make_tuple(json{}, 500, HTTPHeaders{});
         }
 
         auto &fader = faderBank.GetFader(*index);
-        fader.SetValue(*value);
-        return std::make_pair(json{}, 200);
+        fader.SetValue({*value});
+        return std::make_tuple(json{}, 200, HTTPHeaders{});
     });
 }

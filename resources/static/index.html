@@ -1,25 +1,72 @@
 <html>
-  <head>
-    <script src="./site.js"></script>
-    <link rel="stylesheet" href="./bootstrap.min.css">
-  </head>
-  <body>
-    <div class="container">
-      <div class="row">
-        <form>
-          <fieldset>
-            <div class="form-group">
-              <label for="someRange2">Some range</label>
-              <input type="range" class="form-control-range" id="someRange2">
-            </div>
-            <div class="form-group">
-              <label for="someRange">Disabled select menu</label>
-              <select id="someRange" class="form-control">
-              </select>
-            </div>
-          </fieldset>
-        </form>
+
+<head>
+  <script src="./site.js"></script>
+  <link rel="stylesheet" href="./bootstrap.min.css">
+  <style>
+    body.hidden {
+      display: none;
+    }
+
+    .fixture-grid-container {
+      overflow: scroll;
+    }
+
+    .fixture-grid-container table,
+    .fixture-grid-container tbody,
+    .fixture-grid-container tr {
+      padding: 0;
+      margin: 2px;
+      border-collapse: separate;
+    }
+
+    .fixture-grid-container td {
+      background-color: #f9f9f9;
+      min-width: 4em;
+      height: 4em;
+      margin: 10px;
+      padding: 2px;
+      border: 1px dotted #444;
+      border-radius: 4px;
+    }
+
+    .fixture-grid-container td.dragged {
+      opacity: 0.2;
+    }
+
+    .fixture-grid-container td.drag-target {
+      border-color: crimson;
+    }
+
+    .fixture-grid-container td.selected {
+      background-color: lightblue;
+    }
+
+  </style>
+</head>
+
+<body class="hidden">
+  <div class="container">
+    <div class="row">
+      <div class="col-3">
+        <div class="form-group slider">
+          <input type="range" class="form-control-range" min="0" max="65535" value="0">
+        </div>
+      </div>
+      <div class="col-3">
+        <button type="button" class="btn btn-primary btn-md btn-block create-fixture"></button>
+      </div>
+      <div class="col-6 fixture-grid-container">
+        <table>
+          <tbody>
+            <tr>
+              <td class="grid-element" draggable="true"></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>

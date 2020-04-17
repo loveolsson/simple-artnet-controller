@@ -91,9 +91,12 @@
         "strstream": "cpp",
         "typeindex": "cpp",
         "*.ipp": "cpp",
-        "__functional_base_03": "cpp"
+        "__functional_base_03": "cpp",
+        "shared_mutex": "cpp"
     },
     "lldb.displayFormat": "auto",
     "lldb.showDisassembly": "always",
-    "lldb.dereferencePointers": true
+    "lldb.dereferencePointers": true,
+    "clang-format.language.typescript.enable": false,
+    "clang-format.language.javascript.enable": false
 }

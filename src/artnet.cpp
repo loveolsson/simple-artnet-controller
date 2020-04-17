@@ -1,19 +1,22 @@
 #include "artnet.hpp"
 
+#include "artnet/artnet.h"
+
 #include <algorithm>
 #include <iostream>
 #include <thread>
 
 using namespace std::chrono;
 
-static const steady_clock::duration throttleInterval(milliseconds(25));
+static const high_resolution_clock::duration throttleInterval(milliseconds(25));  // 40 fps
+static high_resolution_clock::time_point lastBroadcast(steady_clock::duration::zero());
 
-Artnet::Artnet(const std::string &ip)
-    : lastBroadcast(steady_clock::duration::zero())
+void
+Artnet::Start(const std::string &ip)
 {
     this->node = artnet_new(ip.c_str(), 0);
     if (!this->node) {
-        std::cout << "Unable to set up artnet node:" << artnet_strerror() << std::endl;
+        std::cerr << "Unable to set up artnet node:" << artnet_strerror() << std::endl;
         return;
     }
 
@@ -28,29 +31,23 @@ Artnet::Artnet(const std::string &ip)
     }
 
     if (artnet_start(node) != 0) {
-        std::cout << "Unable to start artnet node:" << artnet_strerror() << std::endl;
+        std::cerr << "Unable to start artnet node:" << artnet_strerror() << std::endl;
+        this->Stop();
+    }
+}
+
+void
+Artnet::Stop()
+{
+    if (node) {
+        artnet_stop(node);
         artnet_destroy(node);
         node = nullptr;
     }
 }
 
-Artnet::~Artnet()
-{
-    if (node) {
-        artnet_stop(node);
-        artnet_destroy(node);
-    }
-}
-
-ArtnetUniverse &
-Artnet::GetUniverse(int index)
-{
-    index = std::clamp(index, 0, (int)this->universes.size() - 1);
-    return this->universes[index];
-}
-
 void
-Artnet::Send()
+Artnet::SendDMX()
 {
     if (!this->node) {
         return;
@@ -64,16 +61,24 @@ Artnet::Send()
 }
 
 void
-Artnet::Throttle()
+Artnet::WaitForNextFrame()
 {
-    auto now      = steady_clock::now();
-    auto earliest = this->lastBroadcast + throttleInterval;
+    auto now      = high_resolution_clock::now();
+    auto earliest = lastBroadcast + throttleInterval;
 
     if (now < earliest) {
         auto wait = earliest - now;
         std::this_thread::sleep_for(wait);
-        this->lastBroadcast = earliest;
+        lastBroadcast = earliest;
     } else {
-        this->lastBroadcast = now;
+        lastBroadcast = now;
+    }
+}
+
+void
+Artnet::SetUniversesZero()
+{
+    for (auto &universe : this->universes) {
+        universe.data.fill(0);
     }
 }

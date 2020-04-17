@@ -1,30 +1,36 @@
 #pragma once
-#include "fixture.hpp"
-
 #include <array>
 #include <chrono>
 #include <string>
 
-extern "C" {
-#include "artnet/artnet.h"
-}
+typedef void *artnet_node;
 
 struct ArtnetUniverse {
     std::array<uint8_t, 512> data;
-    std::array<FixtureId, 512> fixtures;
 };
 
 class Artnet
 {
     std::array<ArtnetUniverse, 4> universes;
     artnet_node node;
-    std::chrono::steady_clock::time_point lastBroadcast;
 
 public:
-    Artnet(const std::string &ip);
-    ~Artnet();
+    void Start(const std::string &ip);
+    void Stop();
 
-    ArtnetUniverse &GetUniverse(int index);
-    void Send();
-    void Throttle();
+    ArtnetUniverse *GetUniverse(size_t index);
+    void SendDMX();
+    void SetUniversesZero();
+
+    static void WaitForNextFrame();
 };
+
+inline ArtnetUniverse *
+Artnet::GetUniverse(size_t index)
+{
+    if (index < this->universes.size()) {
+        return &this->universes[index];
+    }
+
+    return nullptr;
+}

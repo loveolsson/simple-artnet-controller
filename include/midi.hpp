@@ -1,16 +1,22 @@
 #pragma once
 
-#include <rtmidi/RtMidi.h>
-
-#include <functional>
 #include <memory>
 #include <vector>
+
+class RtMidiIn;
+class RtMidiOut;
+
+class MidiUser
+{
+public:
+    virtual void HandleData(uint8_t, uint8_t, uint8_t, uint8_t) = 0;
+};
 
 struct MidiSub {
     int type;
     int channel;
     int index;
-    std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> fn;
+    MidiUser *user;
 };
 
 class MIDI
@@ -25,8 +31,7 @@ public:
     ~MIDI();
 
     bool Valid();
-    void Poll();
-    void Subscribe(int type, int channel, int index,
-                   std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> fn);
+    void PollEvents();
+    void Subscribe(int type, int channel, int index, MidiUser *user);
     void Send(uint8_t type, uint8_t channel, uint8_t index, uint8_t value);
 };

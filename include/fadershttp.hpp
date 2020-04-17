@@ -8,7 +8,7 @@
 
 class HTTPFaders
 {
-    std::array<std::atomic<float>, FaderBank::FaderCount> faderValues{0};
+    std::array<std::atomic<uint16_t>, FaderBank::FaderCount> faderValues{0};
     std::atomic<TimePoint> lastChange{TimePoint{TimePoint::duration::zero()}};
 
 public:

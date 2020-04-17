@@ -1,8 +1,10 @@
 #include "httpserver.hpp"
 
 #include <httplib.h>
+#include <nlohmann/json.hpp>
 
 #include <iostream>
+#include <thread>
 
 using namespace httplib;
 using namespace nlohmann;
@@ -16,24 +18,21 @@ HTTPServer::Run()
 HTTPServer::HTTPServer()
     : server(std::make_unique<Server>())
 {
-    auto port = 32000;
-    if (!this->server->bind_to_port("0.0.0.0", port)) {
-        port = this->server->bind_to_any_port("0.0.0.0");
-    }
-
-    this->url = "http://%IP%:" + std::to_string(port);
-    std::cout << "Starting server on: " << this->url << std::endl;
 }
 
 HTTPServer::~HTTPServer()
 {
-    this->Stop();
 }
 
 void
-HTTPServer::Start()
+HTTPServer::StartThread(int port)
 {
     this->Stop();
+
+    if (!this->server->bind_to_port("0.0.0.0", port)) {
+        port = this->server->bind_to_any_port("0.0.0.0");
+    }
+
     this->thread = std::make_unique<std::thread>(&HTTPServer::Run, this);
 }
 
@@ -61,12 +60,6 @@ HTTPServer::GetServer()
     return *this->server;
 }
 
-const std::string &
-HTTPServer::NDIURL() const
-{
-    return this->url;
-}
-
 void
 HTTPServer::AttachJSONGet(const std::string &path, HTTPJsonFn fn)
 {
@@ -78,8 +71,11 @@ HTTPServer::AttachJSONGet(const std::string &path, HTTPJsonFn fn)
         }
 
         auto ret = fn(body);
-        res.set_content(ret.first.dump(), MIME_json);
-        res.status = ret.second;
+        res.set_content(std::get<0>(ret).dump(), MIME_json);
+        res.status = std::get<1>(ret);
+        for (auto &h : std::get<2>(ret)) {
+            res.set_header(h.first.c_str(), h.second.c_str());
+        }
     });
 }
 
@@ -90,8 +86,11 @@ HTTPServer::AttachJSONPost(const std::string &path, HTTPJsonFn fn)
         try {
             auto body = json::parse(req.body);
             auto ret  = fn(body);
-            res.set_content(ret.first.dump(), MIME_json);
-            res.status = ret.second;
+            res.set_content(std::get<0>(ret).dump(), MIME_json);
+            res.status = std::get<1>(ret);
+            for (auto &h : std::get<2>(ret)) {
+                res.set_header(h.first.c_str(), h.second.c_str());
+            }
         } catch (json::exception &ex) {
             res.set_content(ex.what(), MIME_txt);
             res.status = 500;

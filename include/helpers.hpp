@@ -27,6 +27,19 @@ SafeParseJsonTimePointString(nlohmann::json j)
     return std::nullopt;
 }
 
+static inline TimePoint
+SafeParseJsonTimePointString(nlohmann::json j, TimePoint fallback)
+{
+    try {
+        return TimePoint{TimePoint::duration{std::stoll(j.get<std::string>())}};
+    } catch (std::invalid_argument &) {
+    } catch (std::out_of_range &) {
+    } catch (nlohmann::json::exception &) {
+    }
+
+    return fallback;
+}
+
 template <typename T>
 inline std::optional<T>
 SafeParseJson(nlohmann::json j)

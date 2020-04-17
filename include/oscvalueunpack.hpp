@@ -101,3 +101,41 @@ OSCGetTypeName<std::vector<char>>(std::ostringstream &str)
 {
     str << "blob ";
 }
+
+template <typename T>
+void OSCGetTypeIdentifier(std::ostringstream &str);
+
+template <>
+inline void
+OSCGetTypeIdentifier<float>(std::ostringstream &str)
+{
+    str << "f";
+}
+
+template <>
+inline void
+OSCGetTypeIdentifier<int32_t>(std::ostringstream &str)
+{
+    str << "i";
+}
+
+template <>
+inline void
+OSCGetTypeIdentifier<int64_t>(std::ostringstream &str)
+{
+    str << "h";
+}
+
+template <>
+inline void
+OSCGetTypeIdentifier<std::string>(std::ostringstream &str)
+{
+    str << "s";
+}
+
+template <>
+inline void
+OSCGetTypeIdentifier<std::vector<char>>(std::ostringstream &str)
+{
+    str << "b";
+}

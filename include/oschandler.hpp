@@ -40,12 +40,26 @@ OSCGetTypeNames(std::ostringstream &)
 {
 }
 
+template <typename... Ts, typename std::enable_if<sizeof...(Ts) == 0, void *>::type = nullptr>
+inline const void
+OSCGetTypeIdentifiers(std::ostringstream &)
+{
+}
+
 template <typename T, typename... Ts>
 inline void
 OSCGetTypeNames(std::ostringstream &str)
 {
     OSCGetTypeName<typename std::decay<T>::type>(str);
     OSCGetTypeNames<Ts...>(str);
+}
+
+template <typename T, typename... Ts>
+inline void
+OSCGetTypeIdentifiers(std::ostringstream &str)
+{
+    OSCGetTypeIdentifier<typename std::decay<T>::type>(str);
+    OSCGetTypeIdentifiers<Ts...>(str);
 }
 
 template <typename T>
@@ -71,6 +85,15 @@ struct OSCCallbackUnwrapper<ReturnType (ClassType::*)(Args...) const> {
         res << "]";
         return res.str();
     }
+
+    static std::string
+    GetCallIdentifierString()
+    {
+        std::ostringstream res;
+        res << ",";
+        OSCGetTypeIdentifiers<Args...>(res);
+        return res.str();
+    }
 };
 
 template <typename Func>
@@ -79,31 +102,44 @@ class OSCHandler : public OSCCallable
     Func fn;
 
 public:
-    OSCHandler(Func fn)
-        : fn(fn)
-    {
+    OSCHandler(Func fn);
+    virtual void call(const std::string &data, Transmit *const) final;
+};
+
+template <typename Func>
+inline OSCHandler<Func>::OSCHandler(Func fn)
+    : fn(fn)
+{
+}
+
+template <typename Func>
+inline void
+OSCHandler<Func>::call(const std::string &data, Transmit *const)
+{
+    OSCUnpacker u;
+    u.setData(data);
+
+    std::string path, types;
+    if (!u.unpackString(&path)) {
+        std::cout << "No path" << std::endl;
+        return;
     }
-    virtual void
-    call(const std::string &data, Transmit *const) final
-    {
-        OSCUnpacker u;
-        u.setData(data);
 
-        std::string path;
-        if (!u.unpackString(&path)) {
-            std::cout << "No path" << std::endl;
-            return;
-        }
+    if (!u.unpackString(&types)) {
+        std::cout << "No types" << std::endl;
+        return;
+    }
 
-        if (!u.skipString()) {
-            std::cout << "No types" << std::endl;
-            return;
-        }
+    typedef OSCCallbackUnwrapper<decltype(fn)> unwrapper;
+    auto expected = unwrapper::GetCallIdentifierString();
 
-        typedef OSCCallbackUnwrapper<decltype(fn)> unwrapper;
+    if (expected == types) {
         if (!unwrapper::template Call<Func>(u, fn)) {
-            std::cout << "Invalid parameters to " << path << ", expected "
+            std::cout << "Could not parse command " << path << ", with parameters "
                       << unwrapper::GetCallSignatureString() << std::endl;
         }
+    } else {
+        std::cout << "Invalid parameters to " << path << ", expected " << expected.substr(1)
+                  << " got " << types.substr(1) << std::endl;
     }
-};
+}

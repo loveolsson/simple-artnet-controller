@@ -25,6 +25,7 @@ include_directories( ${libartnet_INC} )
 include_directories( ${libOSCpp_INC} )
 include_directories( ${RtMidi_INC} )
 include_directories( ${sole_INC} )
+include_directories( ${CMAKE_SOURCE_DIR}/submodules/json/include )
 include_directories( ${CMAKE_SOURCE_DIR}/submodules/concurrentqueue )
 
 IF (APPLE)
@@ -34,7 +35,6 @@ IF (APPLE)
 ENDIF (APPLE)
 
 target_link_libraries(${ProjectName}
-    nlohmann_json::nlohmann_json
     ${libartnet_LIB}
     ${RtMidi_LIB}
     ${libOSCpp_LIB}

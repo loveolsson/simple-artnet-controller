@@ -1,37 +1,35 @@
 #pragma once
-#include "oschandler.hpp"
 
-#include <OSC++/InetTransportManager.h>
-#include <OSC++/InetUDPMaster.h>
-#include <OSC++/OSCAssociativeNamespace.h>
-#include <OSC++/OSCProcessor.h>
-
+#include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
+
+class InetTransportManager;
+class OSCAssociativeNamespace;
+class OSCProcessor;
+class InetUDPMaster;
+class OSCCallable;
 
 class OSC
 {
-    std::vector<std::unique_ptr<OSCCallable>> handlers;
+    std::unique_ptr<InetTransportManager> transMan;
+    std::unique_ptr<OSCAssociativeNamespace> nspace;
+    std::unique_ptr<OSCProcessor> processor;
+    std::unique_ptr<InetUDPMaster> udpMaster;
 
-    InetTransportManager transMan;
-    OSCAssociativeNamespace nspace;
-    OSCProcessor processor;
-    InetUDPMaster udpMaster;
+    std::unique_ptr<std::thread> thread;
+    std::atomic_bool running{false};
+
+    void Run();
 
 public:
     OSC();
     ~OSC();
 
-    void Poll();
+    void StartThread();
+    void Stop();
 
-    template <typename Func>
-    void
-    AddTarget(const std::string &path, Func fn)
-    {
-        auto handler = std::make_unique<OSCHandler<Func>>(fn);
-
-        this->nspace.add(path, handler.get());
-        this->handlers.push_back(std::move(handler));
-    }
+    void AddTarget(const std::string &path, OSCCallable *);
 };

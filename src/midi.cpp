@@ -1,5 +1,7 @@
 #include "midi.hpp"
 
+#include <rtmidi/RtMidi.h>
+
 #include <iostream>
 
 MIDI::MIDI()
@@ -29,11 +31,11 @@ MIDI::~MIDI()
 bool
 MIDI::Valid()
 {
-    return this->input && this->output && this->input->isPortOpen() && this->output->isPortOpen();
+    return this->input->isPortOpen() && this->output->isPortOpen();
 }
 
 void
-MIDI::Poll()
+MIDI::PollEvents()
 {
     if (!this->Valid()) {
         return;
@@ -50,7 +52,7 @@ MIDI::Poll()
             for (auto &s : this->subscriptions) {
                 if ((s.type == type || s.type < 0) && (s.channel == channel || s.channel < 0) &&
                     (s.index == index || s.index < 0)) {
-                    s.fn(type, channel, index, value);
+                    s.user->HandleData(type, channel, index, value);
                 }
             }
         }
@@ -58,10 +60,9 @@ MIDI::Poll()
 }
 
 void
-MIDI::Subscribe(int type, int channel, int index,
-                std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> fn)
+MIDI::Subscribe(int type, int channel, int index, MidiUser *user)
 {
-    this->subscriptions.push_back({type, channel, index, fn});
+    this->subscriptions.push_back({type, channel, index, user});
 }
 
 void

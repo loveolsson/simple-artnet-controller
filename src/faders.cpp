@@ -3,54 +3,85 @@
 #include "helpers.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 using namespace std::chrono;
 
-Fader::Fader(Settings &settings, int index)
-    : settings(settings)
-    , value(0)
-    , index(index)
+static float
+Lerp(float a, float b, float f)
 {
-    this->value = this->settings.GetFloat("faderValue" + std::to_string(this->index), 0);
-}
-
-Fader::~Fader()
-{
-    this->settings.SetFloat("faderValue" + std::to_string(this->index), this->value);
+    return a + f * (b - a);
 }
 
 void
-Fader::SetValue(float v)
+Fader::SetValue(IntVal v)
 {
-    this->setQueue.enqueue({v, false});
+    this->setQueue.enqueue({v, TimePoint::duration::zero(), false});
 }
 
 void
-Fader::SetRelative(float v)
+Fader::SetRelative(IntVal v)
 {
-    this->setQueue.enqueue({v, true});
+    this->setQueue.enqueue({v, TimePoint::duration::zero(), true});
 }
 
 void
-Fader::Subscribe(std::function<void(float, TimePoint)> fn)
+Fader::FadeTo(IntVal v, TimePoint::duration dur)
+{
+    this->setQueue.enqueue({v, dur, false});
+}
+
+void
+Fader::Subscribe(std::function<void(IntVal, TimePoint)> fn)
 {
     this->subscriptions.push_back(fn);
-    SetRelative(0);
+    SetRelative({0});
 }
 
-void
+IntVal
 Fader::Poll()
 {
     FaderValueSet set;
     bool hasChanged = false;
+
     while (this->setQueue.try_dequeue(set)) {
         hasChanged = true;
-        if (set.isRelative) {
-            this->value = std::clamp(this->value + set.value, 0.f, 1.f);
+
+        this->fadeTime = set.duration;
+        if (set.duration > TimePoint::duration::zero()) {
+            this->fromValue = this->value;
+            this->fadeStart = NowAsTimePoint();
+
+            if (set.isRelative) {
+                this->toValue.val = std::clamp((this->value.val + set.v.val), 0, IntVal::Max);
+            } else {
+                this->toValue.val = std::clamp(set.v.val, 0, IntVal::Max);
+            }
         } else {
-            this->value = std::clamp(set.value, 0.f, 1.f);
+            if (set.isRelative) {
+                this->value.val = std::clamp((this->value.val + set.v.val), 0, IntVal::Max);
+            } else {
+                this->value.val = std::clamp(set.v.val, 0, IntVal::Max);
+            }
         }
+    }
+
+    if (!hasChanged && this->fadeTime > TimePoint::duration::zero()) {
+        auto now     = NowAsTimePoint();
+        auto endTime = this->fadeStart + this->fadeTime;
+
+        if (now > endTime) {
+            this->fadeTime = TimePoint::duration::zero();
+            this->value    = this->toValue;
+        } else {
+            auto timeIntoFade = (float)(now - this->fadeStart).count() / this->fadeTime.count();
+
+            this->value =
+                IntVal(Lerp(this->fromValue.Get01(), this->toValue.Get01(), timeIntoFade));
+        }
+
+        hasChanged = true;
     }
 
     if (hasChanged) {
@@ -59,26 +90,51 @@ Fader::Poll()
             fn(this->value, changed);
         }
     }
-}
 
-FaderBank::FaderBank(Settings &settings)
-{
-    for (int i = 0; i < FaderCount; ++i) {
-        this->faders[i] = std::make_unique<Fader>(settings, i);
-    }
-}
-
-Fader &
-FaderBank::GetFader(int i)
-{
-    auto iClamped = std::clamp(i, 0, (int)this->faders.size() - 1);
-    return *this->faders[iClamped];
+    return this->value;
 }
 
 void
-FaderBank::Poll()
+Fader::LoadState(Settings &settings, int index)
 {
+    this->value.val = settings.GetJSON("faderValue" + std::to_string(index), 0);
+}
+
+void
+Fader::SaveState(Settings &settings, int index)
+{
+    settings.SetJSON("faderValue" + std::to_string(index), this->value.val);
+}
+
+void
+FaderBank::LoadSettings(Settings &settings)
+{
+    int i = 0;
     for (auto &fader : this->faders) {
-        fader->Poll();
+        fader.LoadState(settings, i);
+        ++i;
     }
+}
+
+void
+FaderBank::StoreSettings(Settings &settings)
+{
+    int i = 0;
+    for (auto &fader : this->faders) {
+        fader.SaveState(settings, i);
+        ++i;
+    }
+}
+
+std::array<IntVal, FaderBank::FaderCount>
+FaderBank::ApplyChangesAndGetState()
+{
+    std::array<IntVal, FaderBank::FaderCount> res;
+
+    int i = 0;
+    for (auto &fader : this->faders) {
+        res[i++] = fader.Poll();
+    }
+
+    return res;
 }

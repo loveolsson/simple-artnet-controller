@@ -2,8 +2,4 @@
 #include "faders.hpp"
 #include "osc.hpp"
 
-class OSCFaders
-{
-public:
-    OSCFaders(OSC &osc, FaderBank &faderBank);
-};
+void InitOSCFaders(OSC &osc, FaderBank &faderBank);
