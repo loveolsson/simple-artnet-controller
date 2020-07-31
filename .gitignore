@@ -13,3 +13,5 @@ _deps
 3rdParty
 Build*
 fakeroot
+resources/static/site.js
+resources/static/site.js*

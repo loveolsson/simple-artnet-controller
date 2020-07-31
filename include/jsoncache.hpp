@@ -1,5 +1,6 @@
 #pragma once
 #include "helpers.hpp"
+#include "httpserver.hpp"
 
 #include <nlohmann/json_fwd.hpp>
 
@@ -35,4 +36,6 @@ public:
     void GetDataAsync(
         TimePoint t,
         std::function<void(std::pair<std::optional<nlohmann::json>, TimePoint>)>) const;
+
+    void Serve(HTTPServer &, const std::string &path);
 };

@@ -48,14 +48,14 @@ struct ResolveMember {
 };
 
 std::vector<FixtureId>
-SceneManager::ResolveScenes(const std::array<IntVal, 8> &faderValues,
+SceneManager::ResolveScenes(const std::array<FaderState, 8> &faderValues,
                             FixtureManager &fixtureManager)
 {
     std::map<FixtureId, ResolveMember> resolved;
 
     int i = 0;
     for (auto &scene : this->scenes) {
-        float fader = faderValues[i++].Get01();
+        float fader = faderValues[i++].value.Get01();
 
         for (auto &m : scene.GetMembers()) {
             auto id      = m.first;

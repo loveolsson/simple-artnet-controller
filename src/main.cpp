@@ -31,6 +31,7 @@ main(int argc, char *argv[])
     signal(SIGINT, intHandler);
 
     if (argc != 2) {
+        std::cout << "Usage: ./simple-artnet 0.0.0.0 (the IP to send ArtNet on)" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -67,6 +68,7 @@ main(int argc, char *argv[])
     artnet.Start(argv[1]);
 
     while (keepRunning) {
+        httpFaders.Poll();
         midi.PollEvents();
 
         const auto deletions = fixtureManager.ApplyChangesAndGetDeletions();

@@ -1,6 +1,8 @@
-import axios, {AxiosResponse} from 'axios'
-import { PostJSON } from './axioshelpers';
-import { GetElementOrThrow, GetParentOrThrow } from './helpers';
+import { PostJSON } from "./axioshelpers";
+import { GetElementOrThrow, GetParentOrThrow, CreateStyleTag } from "./helpers";
+import { Subscriber } from "./subscriber";
+import { create as createSlider, noUiSlider } from "nouislider";
+import { readFileSync } from "fs";
 
 interface FaderData {
   faders: Array<{
@@ -9,58 +11,57 @@ interface FaderData {
 }
 
 export class Sliders {
-  readonly sliders: HTMLInputElement[] = [];
+  readonly rangeables: noUiSlider[] = [];
   userInteract: boolean[] = [];
   activePost: boolean[] = [];
   postAgain: boolean[] = [];
-
-  latestUpdate: string = '0';
+  faderSubscriber?: Subscriber<FaderData>;
 
   Init() {
-    const sliderElement = GetElementOrThrow('.slider');
-    const sliderParent = GetParentOrThrow(sliderElement);
+    CreateStyleTag(
+      readFileSync(
+        __dirname + "/../node_modules/nouislider/distribute/nouislider.min.css",
+        "utf-8"
+      )
+    );
 
+    const sliderElement = GetElementOrThrow(".slider");
+    const sliderParent = GetParentOrThrow(sliderElement);
     sliderParent.removeChild(sliderElement);
+
     for (let i = 0; i < 8; ++i) {
       const newElement = sliderElement.cloneNode(true) as HTMLElement;
       sliderParent.appendChild(newElement);
 
-      const input = newElement.querySelector('input');
-      if (!input) {
-        throw new Error('Slider element has no input');
-      }
-
-      input.addEventListener('mousedown', this.MouseDown.bind(this, i));
-      input.addEventListener('mouseup', this.MouseUp.bind(this, i));
-      input.addEventListener('touchstart', this.MouseDown.bind(this, i));
-      input.addEventListener('touchend', this.MouseUp.bind(this, i));
-      input.addEventListener('input', this.Input.bind(this, i, false));
-      input.addEventListener('change', this.Input.bind(this, i, true));
-
-      this.sliders.push(input);
-    }
-
-    this.Update();
-  }
-
-  async Update() {
-    try {
-      const res: AxiosResponse<FaderData> = await axios.get('/faders?since='+ this.latestUpdate);
-      this.latestUpdate = res.headers['simpleartnettime'];
-      res.data.faders.forEach((f, i) => {
-        if (!this.userInteract[i]) {
-          this.sliders[i].value = f.value.toString();
-        }
+      const slider = createSlider(newElement, {
+        start: 0,
+        range: {
+          min: 0,
+          max: 65535,
+        },
+        orientation: "vertical",
+        direction: "rtl",
+        tooltips: false,
       });
 
-      setTimeout(this.Update.bind(this), this.GetUpdateInterval(false));
-    } catch (e) {
-      if (e.response && (e.response as AxiosResponse).status === 304) {
-        setTimeout(this.Update.bind(this), this.GetUpdateInterval(false));
-      } else {
-        setTimeout(this.Update.bind(this), this.GetUpdateInterval(true));
-      }
+      slider.on("start", this.FaderInteractionStart.bind(this, i));
+      slider.on("end", this.FaderInteractionEnd.bind(this, i));
+      slider.on("slide", this.FaderValueChanged.bind(this, i, true));
+
+      this.rangeables.push(slider);
     }
+
+    this.faderSubscriber = new Subscriber<FaderData>("/faders", 50);
+    this.faderSubscriber.on("updated", this.UpdateFaders.bind(this));
+    this.faderSubscriber.Start();
+  }
+
+  async UpdateFaders(data: FaderData) {
+    data.faders.forEach((f, i) => {
+      if (!this.userInteract[i]) {
+        this.rangeables[i].set(f.value);
+      }
+    });
   }
 
   async SetFader(index: number) {
@@ -71,9 +72,11 @@ export class Sliders {
 
     this.activePost[index] = true;
     try {
-      await PostJSON('/faders', { index, value: parseInt(this.sliders[index].value) });
-    } catch (e) {
-    }
+      await PostJSON("/faders", {
+        index,
+        value: parseInt(this.rangeables[index].get() as string),
+      });
+    } catch (e) {}
     this.activePost[index] = false;
 
     if (this.postAgain[index]) {
@@ -82,28 +85,17 @@ export class Sliders {
     }
   }
 
-  MouseDown(index: number) {
+  FaderInteractionStart(index: number) {
     this.userInteract[index] = true;
   }
 
-  MouseUp(index: number) {
-    this.userInteract[index] = false;
-    this.latestUpdate = '0';
-  }
-
-  Input(index: number, final: boolean) {
+  FaderInteractionEnd(index: number) {
     this.SetFader(index);
+    this.userInteract[index] = false;
+    this.faderSubscriber?.Reset();
   }
 
-  GetUpdateInterval(error: boolean) {
-    if (error) {
-      return this.IsActive() ? 2000 : 5000;
-    } else {
-      return this.IsActive() ? 250 : 5000;
-    }
-  }
-
-  IsActive() {
-    return !document.body.classList.contains("sliders");
+  FaderValueChanged(index: number) {
+    this.SetFader(index);
   }
 }

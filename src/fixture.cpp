@@ -137,13 +137,17 @@ Fixture::Config(const json &config)
 json
 Fixture::SerializeConfig()
 {
-    return json{{"name", this->name},
-                {"universe", this->universe},
-                {"channel", this->channel},
-                {"location", json{
-                                 {"x", this->location.x},
-                                 {"y", this->location.y},
-                             }}};
+    return json{
+        {"name", this->name},
+        {"universe", this->universe},
+        {"channel", this->channel},
+        {"location",
+         json{
+             {"x", this->location.x},
+             {"y", this->location.y},
+         }},
+        {"type", this->type},
+    };
 }
 
 Fixture::Parameters

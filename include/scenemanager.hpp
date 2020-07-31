@@ -1,8 +1,8 @@
 #pragma once
+#include "faders.hpp"
 #include "fixturemanager.hpp"
 #include "scene.hpp"
 #include "settings.hpp"
-#include "types.hpp"
 
 #include <array>
 #include <vector>
@@ -16,7 +16,7 @@ public:
     void StoreSettings(Settings &);
     void ApplyChanges(FixtureManager &);
     void ScrubDeleatedFixtures(const std::vector<FixtureId> &deletions);
-    std::vector<FixtureId> ResolveScenes(const std::array<IntVal, 8> &,
+    std::vector<FixtureId> ResolveScenes(const std::array<FaderState, 8> &,
                                          FixtureManager &fixtureManager);
 
     Scene *GetScene(size_t index);

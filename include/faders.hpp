@@ -11,6 +11,11 @@
 #include <functional>
 #include <vector>
 
+struct FaderState {
+    IntVal value;
+    TimePoint changed;
+};
+
 struct FaderValueSet {
     IntVal v;
     TimePoint::duration duration;
@@ -20,10 +25,10 @@ struct FaderValueSet {
 class Fader
 {
     moodycamel::ConcurrentQueue<FaderValueSet> setQueue;
-    std::vector<std::function<void(IntVal, TimePoint)>> subscriptions;
+    std::vector<std::function<void(FaderState)>> subscriptions;
 
+    FaderState state;
     IntVal fromValue, toValue;
-    IntVal value;
     TimePoint fadeStart;
     TimePoint::duration fadeTime = TimePoint::duration::zero();
 
@@ -31,8 +36,8 @@ public:
     void SetValue(IntVal v);
     void SetRelative(IntVal v);
     void FadeTo(IntVal v, TimePoint::duration dur);
-    void Subscribe(std::function<void(IntVal, TimePoint)> fn);
-    IntVal Poll();
+    void Subscribe(std::function<void(FaderState)> fn);
+    FaderState Poll();
     void LoadState(Settings &, int index);
     void SaveState(Settings &, int index);
 };
@@ -50,7 +55,7 @@ public:
     void StoreSettings(Settings &);
 
     Fader &GetFader(int i);
-    std::array<IntVal, FaderBank::FaderCount> ApplyChangesAndGetState();
+    std::array<FaderState, FaderBank::FaderCount> ApplyChangesAndGetState();
 };
 
 inline Fader &

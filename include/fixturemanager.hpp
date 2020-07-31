@@ -42,7 +42,7 @@ class FixtureManager
 
 public:
     JSONCache jsonFixtureDescs{TimePoint::duration::zero()};
-    JSONCache jsonConfigCache{TimePoint::duration{1000}};
+    JSONCache jsonConfigCache{std::chrono::milliseconds{10000}};
 
     void Init(Settings &);
     void StoreSettings(Settings &);

@@ -1,23 +1,22 @@
 #include "httpserver.hpp"
 
-#include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <restinio/all.hpp>
 
 #include <iostream>
 #include <thread>
 
-using namespace httplib;
 using namespace nlohmann;
 
 void
 HTTPServer::Run()
 {
-    this->server->listen_after_bind();
+    restinio::run(
+        restinio::on_thread_pool(4, restinio::skip_break_signal_handling(), *this->server));
 }
 
 HTTPServer::HTTPServer()
-    : server(std::make_unique<Server>())
+    : router(std::make_unique<router_t>())
 {
 }
 
@@ -28,11 +27,12 @@ HTTPServer::~HTTPServer()
 void
 HTTPServer::StartThread(int port)
 {
-    this->Stop();
-
-    if (!this->server->bind_to_port("0.0.0.0", port)) {
-        port = this->server->bind_to_any_port("0.0.0.0");
-    }
+    this->server =
+        std::make_unique<my_server_t>(restinio::own_io_context(), [this, port](auto &settings) {
+            settings.port(port);
+            settings.address("0.0.0.0");
+            settings.request_handler(std::move(this->router));
+        });
 
     this->thread = std::make_unique<std::thread>(&HTTPServer::Run, this);
 }
@@ -40,84 +40,81 @@ HTTPServer::StartThread(int port)
 void
 HTTPServer::Stop()
 {
-    this->server->stop();
-
-    if (this->thread) {
-        std::cout << "Stopping HTTP server...";
-
+    if (this->server) {
+        restinio::initiate_shutdown(*this->server);
         if (this->thread->joinable()) {
             this->thread->join();
         }
-
-        std::cout << "done." << std::endl;
-
-        this->thread.reset();
     }
 }
 
-Server &
-HTTPServer::GetServer()
+router_t &
+HTTPServer::GetRouter()
 {
-    return *this->server;
+    return *this->router;
 }
 
 void
-HTTPServer::AttachJSONGet(const std::string &path, HTTPJsonFn fn)
+HTTPServer::AttachJSONGet(const std::string &path, HTTPJsonGetFn fn)
 {
-    this->server->Get(path.c_str(), [fn](const Request &req, Response &res) {
-        auto body = json::object();
+    this->router->http_get(path, [fn](std::shared_ptr<restinio::request_t> req,
+                                      restinio::router::route_params_t params) {
+        auto ret = fn(params);
+        auto res = init_resp(req->create_response(std::get<1>(ret)))
+                       .append_header("Content-Type", MIME_json)
+                       .set_body(std::get<0>(ret).dump());
 
-        for (const auto &param : req.params) {
-            body[param.first] = param.second;
-        }
-
-        auto ret = fn(body);
-        res.set_content(std::get<0>(ret).dump(), MIME_json);
-        res.status = std::get<1>(ret);
         for (auto &h : std::get<2>(ret)) {
-            res.set_header(h.first.c_str(), h.second.c_str());
+            res.append_header(h.first.c_str(), h.second.c_str());
         }
+
+        res.done();
+
+        return restinio::request_accepted();
     });
 }
 
 void
-HTTPServer::AttachJSONGetAsync(const std::string &path, HTTPJsonAsyncFn fn)
+HTTPServer::AttachJSONGetAsync(const std::string &path, HTTPJsonGetAsyncFn fn)
 {
-    this->server->Get(path.c_str(), [fn](const Request &req, Response &res) {
-        auto body = json::object();
+    this->router->http_get(path.c_str(), [fn](std::shared_ptr<restinio::request_t> req,
+                                              restinio::router::route_params_t params) {
+        fn(params, [req](const HTTPJsonRes &ret) {
+            auto res = init_resp(req->create_response(std::get<1>(ret)))
+                           .append_header("Content-Type", MIME_json);
+            res.set_body(std::get<0>(ret).dump());
 
-        for (const auto &param : req.params) {
-            body[param.first] = param.second;
-        }
-
-        res.set_header("Content-Type", MIME_json);
-        res.set_chunked_content_provider([&fn, body](uint64_t offset, DataSink &sink) {
-            auto cb = [&sink](HTTPJsonRes ret) {
-                auto data = std::get<0>(ret).dump();
-                sink.write(data.data(), data.size());
-                sink.done();
-            };
-
-            fn(body, cb);
-        });
-    });
-}
-
-void
-HTTPServer::AttachJSONPost(const std::string &path, HTTPJsonFn fn)
-{
-    this->server->Post(path.c_str(), [fn](const Request &req, Response &res) {
-        try {
-            auto body = json::parse(req.body);
-            auto ret  = fn(body);
-            res.set_content(std::get<0>(ret).dump(), MIME_json);
-            res.status = std::get<1>(ret);
             for (auto &h : std::get<2>(ret)) {
-                res.set_header(h.first.c_str(), h.second.c_str());
+                res.append_header(h.first.c_str(), h.second.c_str());
             }
+
+            res.done();
+        });
+
+        return restinio::request_accepted();
+    });
+}
+
+void
+HTTPServer::AttachJSONPost(const std::string &path, HTTPJsonPostFn fn)
+{
+    this->router->http_post(path.c_str(), [fn](std::shared_ptr<restinio::request_t> req,
+                                               restinio::router::route_params_t params) {
+        try {
+            auto body = json::parse(req->body());
+            auto ret  = fn(body);
+            auto res  = init_resp(req->create_response(std::get<1>(ret)))
+                           .append_header("Content-Type", MIME_json)
+                           .set_body(std::get<0>(ret).dump());
+            for (auto &h : std::get<2>(ret)) {
+                res.append_header(h.first.c_str(), h.second.c_str());
+            }
+            res.done();
+            return restinio::request_accepted();
+
         } catch (json::exception &ex) {
-            res.set_content(ex.what(), MIME_txt);
-            res.status = 500;
         }
+
+        return restinio::request_rejected();
     });
 }

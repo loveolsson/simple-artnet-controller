@@ -1,6 +1,7 @@
 #include "jsoncache.hpp"
 
 #include <nlohmann/json.hpp>
+using namespace nlohmann;
 
 JSONCache::JSONCache(const TimePoint::duration maxWait)
     : maxWait(maxWait)
@@ -30,9 +31,20 @@ JSONCache::Poll()
 void
 JSONCache::SetData(const nlohmann::json &&j)
 {
-    std::unique_lock lock(this->dataMutex);
-    this->timePoint = NowAsTimePoint();
-    this->data      = std::move(j);
+    {
+        std::unique_lock lock(this->dataMutex);
+        this->timePoint = NowAsTimePoint();
+        this->data      = std::move(j);
+    }
+
+    {
+        std::lock_guard lock2(this->waiterMutex);
+        for (auto &waiter : this->waiters) {
+            waiter.fn(this->GetData(waiter.since));
+        }
+
+        this->waiters.clear();
+    }
 }
 
 std::pair<std::optional<nlohmann::json>, TimePoint>
@@ -65,4 +77,24 @@ JSONCache::GetDataAsync(
     } else {
         fn({std::nullopt, this->timePoint});
     }
+}
+
+void
+JSONCache::Serve(HTTPServer &server, const std::string &path)
+{
+    server.AttachJSONGetAsync(path + "/:since", [this](const HTTPJsonGetReq &req,
+                                                       std::function<void(HTTPJsonRes)> resCb) {
+        TimePoint since =
+            SafeParseJsonTimePointString(req["since"], TimePoint{TimePoint::duration::zero()});
+
+        this->GetDataAsync(since, [resCb](auto data) {
+            if (data.first.has_value()) {
+                resCb(HTTPJsonRes(std::move(*data.first), restinio::status_ok(),
+                                  {{"SimpleArtnetTime", TimePointToString(data.second)}}));
+            } else {
+                resCb(HTTPJsonRes(nullptr, restinio::status_not_modified(),
+                                  {{"SimpleArtnetTime", TimePointToString(data.second)}}));
+            }
+        });
+    });
 }

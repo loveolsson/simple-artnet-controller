@@ -93,7 +93,10 @@
         "*.ipp": "cpp",
         "__functional_base_03": "cpp",
         "shared_mutex": "cpp",
-        "__cxx_version": "cpp"
+        "__cxx_version": "cpp",
+        "coroutine": "cpp",
+        "format": "cpp",
+        "filesystem": "cpp"
     },
     "lldb.displayFormat": "auto",
     "lldb.showDisassembly": "auto",

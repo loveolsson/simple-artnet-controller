@@ -2,13 +2,13 @@
 
 #include "httpstaticfiles.hpp"
 
-#include <httplib.h>
+#include <restinio/all.hpp>
 
 #include <map>
 #include <string>
 #include <utility>
 
-using namespace httplib;
+using namespace restinio;
 
 struct StaticFile {
     const char *path;
@@ -26,8 +26,13 @@ InitStaticFiles(HTTPServer *server)
     };
 
     for (const auto &file : files) {
-        server->GetServer().Get(file.path, [file](const Request &req, Response &res) {
-            res.set_content(file.str, file.type);
+        server->GetRouter().http_get(file.path, [file](auto req, auto) {
+            init_resp(req->create_response())
+                .append_header("Content-Type", file.type)
+                .set_body(file.str)
+                .done();
+
+            return restinio::request_accepted();
         });
     }
 }

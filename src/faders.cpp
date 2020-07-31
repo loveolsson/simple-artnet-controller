@@ -33,13 +33,13 @@ Fader::FadeTo(IntVal v, TimePoint::duration dur)
 }
 
 void
-Fader::Subscribe(std::function<void(IntVal, TimePoint)> fn)
+Fader::Subscribe(std::function<void(FaderState)> fn)
 {
     this->subscriptions.push_back(fn);
     SetRelative({0});
 }
 
-IntVal
+FaderState
 Fader::Poll()
 {
     FaderValueSet set;
@@ -50,19 +50,20 @@ Fader::Poll()
 
         this->fadeTime = set.duration;
         if (set.duration > TimePoint::duration::zero()) {
-            this->fromValue = this->value;
+            this->fromValue = this->state.value;
             this->fadeStart = NowAsTimePoint();
 
             if (set.isRelative) {
-                this->toValue.val = std::clamp((this->value.val + set.v.val), 0, IntVal::Max);
+                this->toValue.val = std::clamp((this->state.value.val + set.v.val), 0, IntVal::Max);
             } else {
                 this->toValue.val = std::clamp(set.v.val, 0, IntVal::Max);
             }
         } else {
             if (set.isRelative) {
-                this->value.val = std::clamp((this->value.val + set.v.val), 0, IntVal::Max);
+                this->state.value.val =
+                    std::clamp((this->state.value.val + set.v.val), 0, IntVal::Max);
             } else {
-                this->value.val = std::clamp(set.v.val, 0, IntVal::Max);
+                this->state.value.val = std::clamp(set.v.val, 0, IntVal::Max);
             }
         }
     }
@@ -72,12 +73,12 @@ Fader::Poll()
         auto endTime = this->fadeStart + this->fadeTime;
 
         if (now > endTime) {
-            this->fadeTime = TimePoint::duration::zero();
-            this->value    = this->toValue;
+            this->fadeTime    = TimePoint::duration::zero();
+            this->state.value = this->toValue;
         } else {
             auto timeIntoFade = (float)(now - this->fadeStart).count() / this->fadeTime.count();
 
-            this->value =
+            this->state.value =
                 IntVal(Lerp(this->fromValue.Get01(), this->toValue.Get01(), timeIntoFade));
         }
 
@@ -85,25 +86,25 @@ Fader::Poll()
     }
 
     if (hasChanged) {
-        auto changed = NowAsTimePoint();
+        this->state.changed = NowAsTimePoint();
         for (auto &fn : this->subscriptions) {
-            fn(this->value, changed);
+            fn(this->state);
         }
     }
 
-    return this->value;
+    return this->state;
 }
 
 void
 Fader::LoadState(Settings &settings, int index)
 {
-    this->value.val = settings.GetJSON("faderValue" + std::to_string(index), 0);
+    this->state.value.val = settings.GetJSON("faderValue" + std::to_string(index), 0);
 }
 
 void
 Fader::SaveState(Settings &settings, int index)
 {
-    settings.SetJSON("faderValue" + std::to_string(index), this->value.val);
+    settings.SetJSON("faderValue" + std::to_string(index), this->state.value.val);
 }
 
 void
@@ -126,10 +127,10 @@ FaderBank::StoreSettings(Settings &settings)
     }
 }
 
-std::array<IntVal, FaderBank::FaderCount>
+std::array<FaderState, FaderBank::FaderCount>
 FaderBank::ApplyChangesAndGetState()
 {
-    std::array<IntVal, FaderBank::FaderCount> res;
+    std::array<FaderState, FaderBank::FaderCount> res;
 
     int i = 0;
     for (auto &fader : this->faders) {

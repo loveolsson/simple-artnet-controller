@@ -49,9 +49,12 @@ MIDI::PollEvents()
             uint8_t index   = msg[1] & 0x7F;
             uint8_t value   = msg[2] & 0x7F;
 
+            std::cout << "Type: " << (int)type << ", Channel: " << (int)channel
+                      << ", Index: " << (int)index << ", Value: " << (int)value << std::endl;
+
             for (auto &s : this->subscriptions) {
                 if ((s.type == type || s.type < 0) && (s.channel == channel || s.channel < 0) &&
-                    (s.index == index || s.index < 0)) {
+                    (s.index == index || s.index < 0) && (s.value == value || s.value < 0)) {
                     s.user->HandleData(type, channel, index, value);
                 }
             }
@@ -60,9 +63,9 @@ MIDI::PollEvents()
 }
 
 void
-MIDI::Subscribe(int type, int channel, int index, MidiUser *user)
+MIDI::Subscribe(int type, int channel, int index, int value, MidiUser *user)
 {
-    this->subscriptions.push_back({type, channel, index, user});
+    this->subscriptions.push_back({type, channel, index, value, user});
 }
 
 void
@@ -79,4 +82,14 @@ MIDI::Send(uint8_t type, uint8_t channel, uint8_t index, uint8_t value)
     };
 
     this->output->sendMessage(&msg);
+}
+
+void
+MIDI::Send(const std::vector<uint8_t> &data)
+{
+    if (!this->output || !this->output->isPortOpen()) {
+        return;
+    }
+
+    this->output->sendMessage(&data);
 }

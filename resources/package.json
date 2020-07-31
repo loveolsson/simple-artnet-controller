@@ -6,7 +6,8 @@
   "scripts": {
     "build-tsc": "./node_modules/.bin/tsc",
     "build-browserify": "./node_modules/.bin/browserify ./dist/index.js -o ./static/site.js",
-    "build-browserify-min": "./node_modules/.bin/browserify -p tinyify ./dist/index.js -o ./static/site.js",
+    "build-browserify-min": "./node_modules/.bin/browserify -t brfs -p tinyify ./dist/index.js -o ./static/site.js",
+    "build-browserify-min-test": "browserify ./dist/index.js -g unassertify -g envify -g uglifyify -p common-shakeify -p browser-pack-flat/plugin | uglifyjs -cm --toplevel > ./static/site.js",
     "build": "npm run build-tsc && npm run build-browserify",
     "build-min": "npm run build-tsc && npm run build-browserify-min",
     "prettier-fix": "./node_modules/.bin/prettier --write src/**/*.ts",
@@ -16,12 +17,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fortawesome/free-solid-svg-icons": "^5.13.0",
     "@types/axios": "^0.14.0",
+    "@types/nouislider": "^9.0.6",
     "axios": "^0.19.2",
+    "brfs": "^2.0.2",
+    "browser-pack-flat": "^3.4.2",
     "browserify": "^16.5.1",
+    "common-shakeify": "^0.6.2",
+    "envify": "^4.1.0",
+    "nouislider": "^14.2.0",
     "prettier": "^2.0.2",
     "tinyify": "^2.5.2",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "uglify-es": "^3.3.9",
+    "uglifyify": "^5.0.2",
+    "unassertify": "^2.1.1"
   },
   "devDependencies": {
     "@types/node": "^13.11.0"

@@ -1,6 +1,7 @@
 #include "fixturemanagerhttp.hpp"
 
 #include "helpers.hpp"
+#include "typesjson.hpp"
 
 #include <iostream>
 
@@ -9,36 +10,32 @@ using namespace nlohmann;
 void
 InitFixtureManagerHTTP(HTTPServer &server, FixtureManager &fixtureManager)
 {
-    server.AttachJSONGetAsync("/fixtures", [&fixtureManager](auto req, auto resCb) {
-        TimePoint since =
-            SafeParseJsonTimePointString(req["since"], TimePoint{TimePoint::duration::zero()});
+    fixtureManager.jsonConfigCache.Serve(server, "/fixtures");
+    fixtureManager.jsonFixtureDescs.Serve(server, "/fixtureDescriptions");
 
-        fixtureManager.jsonConfigCache.GetDataAsync(since, [resCb](auto fixtures) {
-            std::cout << "Async" << std::endl;
-            if (fixtures.first.has_value()) {
-                resCb(std::make_tuple(
-                    std::move(*fixtures.first), 200,
-                    HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}}));
-            }
+    server.AttachJSONPost("/setFixtureLocation", [&fixtureManager](HTTPJsonPostReq req) {
+        try {
+            FixtureId id = std::stoull(req["id"].get<std::string>());
+            Location loc = req["location"];
 
-            resCb(std::make_tuple(
-                json(), 304,
-                HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}}));
-        });
-    });
-
-    server.AttachJSONGet("/fixtureDescriptions", [&fixtureManager](auto req) {
-        TimePoint since =
-            SafeParseJsonTimePointString(req["since"], TimePoint{TimePoint::duration::zero()});
-
-        auto fixtures = fixtureManager.jsonFixtureDescs.GetData(since);
-        if (fixtures.first.has_value()) {
-            return std::make_tuple(
-                std::move(*fixtures.first), 200,
-                HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}});
+            fixtureManager.SetLocation(id, loc);
+        } catch (nlohmann::json::exception &ex) {
+            return HTTPJsonRes{nullptr, restinio::status_internal_server_error(), {}};
         }
 
-        return std::make_tuple(
-            json(), 304, HTTPHeaders{{"SimpleArtnetTime", TimePointToString(fixtures.second)}});
+        return HTTPJsonRes{nullptr, restinio::status_ok(), {}};
+    });
+
+    server.AttachJSONPost("/createFixture", [&fixtureManager](HTTPJsonPostReq req) {
+        try {
+            std::string type = req["type"];
+            Location loc     = req["location"];
+
+            fixtureManager.CreateFixture(type, loc);
+        } catch (nlohmann::json::exception &ex) {
+            return HTTPJsonRes{nullptr, restinio::status_internal_server_error(), {}};
+        }
+
+        return HTTPJsonRes{nullptr, restinio::status_ok(), {}};
     });
 }

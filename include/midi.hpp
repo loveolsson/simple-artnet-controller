@@ -16,6 +16,7 @@ struct MidiSub {
     int type;
     int channel;
     int index;
+    int value;
     MidiUser *user;
 };
 
@@ -32,6 +33,7 @@ public:
 
     bool Valid();
     void PollEvents();
-    void Subscribe(int type, int channel, int index, MidiUser *user);
+    void Subscribe(int type, int channel, int index, int value, MidiUser *user);
     void Send(uint8_t type, uint8_t channel, uint8_t index, uint8_t value);
+    void Send(const std::vector<uint8_t> &data);
 };
